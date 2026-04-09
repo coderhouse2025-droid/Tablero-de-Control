@@ -1,0 +1,26 @@
+# 1. Crear el proyecto React
+npm create vite@latest informe-sce -- --template react
+cd informe-sce
+
+# 2. Instalar dependencias
+npm install
+npm install recharts
+
+# 3. Reemplazar src/App.jsx con tu InformeFinanciero_SCE.jsx
+
+# 4. Subir a GitHub
+git init
+git add .
+git commit -m "Informe SCE"
+git remote add origin https://github.com/TU_USUARIO/informe-sce.git
+git push -u origin main
+
+# 5. Publicar en GitHub Pages
+npm install --save-dev gh-pages
+
+export default { base: '/informeFinanciero-SCE.jsx/' }
+
+"scripts": {
+  "deploy": "npm run build && gh-pages -d dist"
+}
+npm run deploy
