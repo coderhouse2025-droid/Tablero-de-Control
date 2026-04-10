@@ -1,436 +1,465 @@
-import { useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, CartesianGrid } from "recharts";
-
-const COLORS = ["#1a3a1a", "#2e6d3a", "#4a9b5b", "#a8d4a8", "#d4ead4"];
-const ACCENT = "#c8a84b";
-
-const formatM = (v) => `$${(v / 1_000_000).toFixed(1)}M`;
-const formatPct = (v) => `${(v * 100).toFixed(1)}%`;
-
-const fuentes = [
-  { name: "Tesoro Nacional", credito: 1685.1, devengado: 1625.8, ejecucion: 0.964781 },
-  { name: "Recursos Propios", credito: 1254.5, devengado: 920.5, ejecucion: 0.733729 },
-  { name: "Transf. Externas", credito: 33.9, devengado: 21.0, ejecucion: 0.619004 },
-  { name: "Crédito Interno", credito: 0.4, devengado: 0.4, ejecucion: 0.999838 },
-];
-
-const conceptos = [
-  { name: "Gastos en Personal", credito: 1596.7, devengado: 1583.4 },
-  { name: "Servicios No Pers.", credito: 499.2, devengado: 404.6 },
-  { name: "Transferencias", credito: 330.3, devengado: 318.0 },
-  { name: "Inc. Act. Financieros", credito: 248.2, devengado: 0.0 },
-  { name: "Gastos Figurativos", credito: 216.1, devengado: 216.1 },
-  { name: "Bienes de Uso", credito: 45.8, devengado: 16.8 },
-  { name: "Bienes de Consumo", credito: 37.8, devengado: 28.8 },
-];
-
-const evolucionMensual = [
-  { mes: "Ene", comprometido: 142, devengado: 138, pagado: 121 },
-  { mes: "Feb", comprometido: 168, devengado: 155, pagado: 143 },
-  { mes: "Mar", comprometido: 195, devengado: 189, pagado: 172 },
-  { mes: "Abr", comprometido: 221, devengado: 208, pagado: 191 },
-  { mes: "May", comprometido: 248, devengado: 231, pagado: 215 },
-  { mes: "Jun", comprometido: 267, devengado: 254, pagado: 238 },
-  { mes: "Jul", comprometido: 289, devengado: 272, pagado: 253 },
-  { mes: "Ago", comprometido: 312, devengado: 296, pagado: 274 },
-  { mes: "Sep", comprometido: 334, devengado: 315, pagado: 298 },
-  { mes: "Oct", comprometido: 358, devengado: 339, pagado: 318 },
-  { mes: "Nov", comprometido: 381, devengado: 362, pagado: 341 },
-  { mes: "Dic", comprometido: 406, devengado: 387, pagado: 362 },
-];
-
-const hallazgos = [
-  {
-    id: "OBS-001",
-    tipo: "OBSERVACIÓN",
-    color: "#e74c3c",
-    titulo: "Subejecución en Bienes de Uso",
-    detalle:
-      "El crédito destinado a Bienes de Uso presenta una ejecución del 36,7%, significativamente por debajo de la media del organismo (86,3%). Se recomienda rever la planificación de adquisiciones.",
-  },
-  {
-    id: "OBS-002",
-    tipo: "OBSERVACIÓN",
-    color: "#e74c3c",
-    titulo: "Incremento de Activos Financieros sin ejecución",
-    detalle:
-      "El crédito de $248,2M asignado a Incremento de Activos Financieros no registra pagos en el período auditado. Se requiere documentación justificatoria.",
-  },
-  {
-    id: "REC-001",
-    tipo: "RECOMENDACIÓN",
-    color: "#2e6d3a",
-    titulo: "Mejora en planificación presupuestaria",
-    detalle:
-      "Se sugiere implementar un sistema de seguimiento trimestral del gasto por fuente de financiamiento, con alertas tempranas ante desviaciones superiores al 15% respecto a lo programado.",
-  },
-  {
-    id: "REC-002",
-    tipo: "RECOMENDACIÓN",
-    color: "#2e6d3a",
-    titulo: "Fortalecimiento del control interno",
-    detalle:
-      "Reforzar los procedimientos de control previo para Transferencias Externas, cuya ejecución del 61,9% es la más baja entre las fuentes de financiamiento.",
-  },
-];
-
-const pieData = conceptos
-  .filter((c) => c.devengado > 0)
-  .map((c) => ({ name: c.name, value: c.devengado }));
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{ background: "#0d2110", border: "1px solid #2e6d3a", borderRadius: 4, padding: "8px 14px", fontSize: 12 }}>
-        <p style={{ color: "#a8d4a8", marginBottom: 4 }}>{label}</p>
-        {payload.map((p, i) => (
-          <p key={i} style={{ color: p.color, margin: "2px 0" }}>
-            {p.name}: <b>{typeof p.value === "number" && p.value > 10 ? `$${p.value.toFixed(0)}M` : p.value}</b>
-          </p>
-        ))}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Informe Financiero — Secretaría Control Ecológico 2012</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, serif; background: #071a07; color: #d4ead4; min-height: 100vh; }
+ 
+    /* HEADER */
+    .header { background: linear-gradient(135deg, #0d2110 0%, #1a3a1a 100%); border-bottom: 3px solid #c8a84b; padding: 24px 32px; }
+    .header-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+    .header-logo { width: 52px; height: 52px; background: #c8a84b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .header-sub { font-size: 10px; letter-spacing: 3px; color: #c8a84b; text-transform: uppercase; margin-bottom: 2px; }
+    .header h1 { font-size: 20px; color: #fff; letter-spacing: 1px; }
+    .header-divider { margin-top: 16px; border-top: 1px solid #2e4a2e; padding-top: 12px; }
+    .header h2 { font-size: 15px; color: #a8d4a8; font-weight: normal; letter-spacing: 1px; }
+    .header-meta { display: flex; gap: 24px; margin-top: 8px; font-size: 11px; color: #7aab7a; }
+ 
+    /* KPIS */
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); background: #0d2110; border-bottom: 2px solid #1a3a1a; }
+    .kpi { padding: 20px 24px; border-right: 1px solid #1a3a1a; }
+    .kpi-icon { font-size: 18px; margin-bottom: 4px; }
+    .kpi-value { font-size: 22px; font-weight: bold; color: #c8a84b; }
+    .kpi-value.green { color: #5bc85b; }
+    .kpi-value.red { color: #e74c3c; }
+    .kpi-label { font-size: 11px; color: #7aab7a; margin-top: 4px; letter-spacing: 0.5px; }
+ 
+    /* TABS */
+    .tabs { display: flex; background: #0d2110; border-bottom: 2px solid #1a3a1a; padding: 0 16px; overflow-x: auto; }
+    .tab-btn { padding: 12px 18px; border: none; background: none; cursor: pointer; font-size: 12px; letter-spacing: 0.5px; font-family: Georgia, serif; color: #7aab7a; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.2s; white-space: nowrap; }
+    .tab-btn.active { color: #c8a84b; border-bottom-color: #c8a84b; }
+    .tab-btn:hover { color: #a8d4a8; }
+ 
+    /* CONTENT */
+    .content { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+ 
+    /* SECTION TITLE */
+    .section-title { font-size: 11px; letter-spacing: 2px; color: #c8a84b; text-transform: uppercase; border-bottom: 1px solid #1a3a1a; padding-bottom: 8px; margin-bottom: 16px; margin-top: 0; }
+ 
+    /* TEXT */
+    .body-text { font-size: 13px; line-height: 1.8; color: #b0d4b0; margin-bottom: 24px; }
+    .highlight { color: #c8a84b; font-weight: bold; }
+    .highlight-green { color: #5bc85b; font-weight: bold; }
+    .highlight-red { color: #e74c3c; font-weight: bold; }
+ 
+    /* CHART GRID */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .chart-box { background: #0d2110; border: 1px solid #1e3d1e; border-radius: 6px; padding: 20px; }
+    .chart-title { color: #c8a84b; font-size: 12px; letter-spacing: 1px; margin-bottom: 16px; text-transform: uppercase; }
+    .chart-container { position: relative; }
+ 
+    /* CONCLUSION GRID */
+    .conclusion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .conclusion-item { display: flex; gap: 10px; padding: 12px 16px; background: #0d2110; border-radius: 4px; font-size: 12px; color: #b0d4b0; line-height: 1.6; }
+    .conclusion-item.ok { border: 1px solid #1a4a1a; }
+    .conclusion-item.warn { border: 1px solid #4a1a1a; }
+    .conclusion-item .icon { font-size: 16px; flex-shrink: 0; }
+ 
+    /* TABLE */
+    .table-wrap { overflow-x: auto; margin-bottom: 32px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead tr { background: #1a3a1a; }
+    th { padding: 10px 14px; text-align: right; font-weight: normal; font-size: 10px; letter-spacing: 0.5px; color: #c8a84b; border-bottom: 2px solid #c8a84b; }
+    th:first-child { text-align: left; }
+    td { padding: 11px 14px; text-align: right; border-bottom: 1px solid #1a3a1a; color: #a8d4a8; }
+    td:first-child { text-align: left; color: #d4ead4; }
+    tr:hover td { background: #0f2a0f; }
+    .total-row td { background: #1a3a1a; color: #fff; font-weight: bold; }
+    .total-row td:nth-child(2), .total-row td:nth-child(5) { color: #c8a84b; }
+    .total-row td:nth-child(6) { color: #5bc85b; }
+ 
+    /* PROGRESS BAR */
+    .progress-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+    .progress-bar { width: 60px; height: 6px; background: #1a3a1a; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+    .progress-fill.green { background: #2e6d3a; }
+    .progress-fill.red { background: #c0392b; }
+ 
+    /* BADGE */
+    .badge { padding: 3px 8px; border-radius: 3px; font-size: 10px; }
+    .badge.ok { background: #1a3a1a; color: #5bc85b; border: 1px solid #2a6a2a; }
+    .badge.warn { background: #3a1a1a; color: #e74c3c; border: 1px solid #6a2a2a; }
+ 
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 28px; }
+    .stat-card { background: #0d2110; border: 1px solid #1e3d1e; border-radius: 6px; padding: 16px; }
+    .stat-value { font-size: 20px; font-weight: bold; color: #c8a84b; }
+    .stat-label { font-size: 11px; color: #d4ead4; margin: 6px 0 4px; }
+    .stat-delta { font-size: 10px; color: #7aab7a; }
+ 
+    /* HALLAZGOS */
+    .hallazgos-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+    .hallazgo { background: #0d2110; border-radius: 4px; padding: 16px 20px; }
+    .hallazgo.obs { border: 1px solid #e74c3c44; border-left: 4px solid #e74c3c; }
+    .hallazgo.rec { border: 1px solid #2e6d3a44; border-left: 4px solid #2e6d3a; }
+    .hallazgo-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .hallazgo-tipo { padding: 2px 8px; font-size: 10px; border-radius: 2px; color: #fff; letter-spacing: 1px; font-family: monospace; }
+    .hallazgo-tipo.obs { background: #e74c3c; }
+    .hallazgo-tipo.rec { background: #2e6d3a; }
+    .hallazgo-id { font-size: 11px; color: #7aab7a; font-family: monospace; }
+    .hallazgo h4 { margin: 0 0 8px 0; font-size: 13px; color: #d4ead4; }
+    .hallazgo p { margin: 0; font-size: 12px; color: #a0c4a0; line-height: 1.7; }
+ 
+    /* RESPUESTA BOX */
+    .respuesta-box { background: #0d2110; border: 1px solid #1e3d1e; border-radius: 6px; padding: 20px; }
+    .respuesta-box h4 { color: #c8a84b; font-size: 12px; letter-spacing: 1px; margin: 0 0 16px 0; text-transform: uppercase; }
+    .respuesta-box p { font-size: 12px; color: #b0d4b0; line-height: 1.8; margin: 0; }
+    .respuesta-estado { display: flex; gap: 12px; margin-top: 12px; align-items: center; }
+    .respuesta-label { font-size: 11px; color: #7aab7a; }
+    .respuesta-badge { font-size: 11px; color: #5bc85b; background: #1a3a1a; padding: 2px 10px; border-radius: 3px; border: 1px solid #2a6a2a; }
+ 
+    /* FOOTER */
+    .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #1a3a1a; display: flex; justify-content: space-between; font-size: 10px; color: #3a5a3a; }
+ 
+    @media (max-width: 700px) {
+      .kpis { grid-template-columns: repeat(2,1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .conclusion-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .header-meta { flex-direction: column; gap: 4px; }
+      .footer { flex-direction: column; gap: 4px; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+ 
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-logo">⚖</div>
+    <div>
+      <div class="header-sub">Organismo de Control</div>
+      <h1>SECRETARÍA CONTROL ECOLÓGICO</h1>
+    </div>
+  </div>
+  <div class="header-divider">
+    <h2>INFORME DE AUDITORÍA PRESUPUESTARIA — EJERCICIO 2012</h2>
+    <div class="header-meta">
+      <span>Actuación N° 2012/0187</span>
+      <span>Entidad: Organismo Descentralizado — Control Ecológico</span>
+      <span>Aprobado: Resolución SCE 42/2013</span>
+    </div>
+  </div>
+</div>
+ 
+<!-- KPIS -->
+<div class="kpis">
+  <div class="kpi"><div class="kpi-icon">📋</div><div class="kpi-value">$2.974M</div><div class="kpi-label">Crédito Vigente Total</div></div>
+  <div class="kpi"><div class="kpi-icon">💳</div><div class="kpi-value">$2.568M</div><div class="kpi-label">Total Devengado</div></div>
+  <div class="kpi"><div class="kpi-icon">📊</div><div class="kpi-value green">86.3%</div><div class="kpi-label">Ejecución Presupuestaria</div></div>
+  <div class="kpi"><div class="kpi-icon">🏛</div><div class="kpi-value">4</div><div class="kpi-label">Fuentes de Financiamiento</div></div>
+</div>
+ 
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('resumen', this)">RESUMEN EJECUTIVO</button>
+  <button class="tab-btn" onclick="showTab('fuentes', this)">FUENTES DE FINANCIAMIENTO</button>
+  <button class="tab-btn" onclick="showTab('conceptos', this)">ESTRUCTURA DEL GASTO</button>
+  <button class="tab-btn" onclick="showTab('evolucion', this)">EVOLUCIÓN MENSUAL</button>
+  <button class="tab-btn" onclick="showTab('hallazgos', this)">HALLAZGOS</button>
+</div>
+ 
+<!-- CONTENT -->
+<div class="content">
+ 
+  <!-- RESUMEN -->
+  <div id="tab-resumen" class="tab-panel active">
+    <h3 class="section-title">I. OBJETO DE LA AUDITORÍA</h3>
+    <p class="body-text">
+      La presente actuación tuvo por objeto verificar la legalidad, regularidad y eficiencia en la ejecución presupuestaria del Organismo durante el ejercicio fiscal 2012, con especial énfasis en la utilización de los créditos asignados por fuente de financiamiento y objeto del gasto, conforme lo establecido en la Ley N° 25.675 General del Ambiente y los Sistemas de Control del Sector Público Nacional.
+    </p>
+    <h3 class="section-title">II. ALCANCE</h3>
+    <p class="body-text">
+      Se auditaron el 100% de las fuentes de financiamiento y conceptos de gasto, abarcando un crédito vigente total de <span class="highlight">$2.974,0 millones</span> y devengado consumido de <span class="highlight">$2.567,7 millones</span>, lo que representa una ejecución presupuestaria global del <span class="highlight-green">86,3%</span>.
+    </p>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Distribución del Gasto Devengado</div>
+        <div class="chart-container"><canvas id="pieChart" height="200"></canvas></div>
       </div>
-    );
-  }
-  return null;
-};
-
-export default function InformeFinanciero() {
-  const [tab, setTab] = useState("resumen");
-
-  const totalCredito = fuentes.reduce((a, b) => a + b.credito, 0);
-  const totalPagado = fuentes.reduce((a, b) => a + b.devengado, 0);
-  const ejecPromedio = totalPagado / totalCredito;
-
-  const tabs = [
-    { id: "resumen", label: "Resumen Ejecutivo" },
-    { id: "fuentes", label: "Fuentes de Financiamiento" },
-    { id: "conceptos", label: "Estructura del Gasto" },
-    { id: "evolucion", label: "Evolución Mensual" },
-    { id: "hallazgos", label: "Hallazgos" },
-  ];
-
-  return (
-    <div style={{ fontFamily: "'Georgia', serif", background: "#071a07", color: "#d4ead4", minHeight: "100vh", padding: "0" }}>
-      {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #0d2110 0%, #1a3a1a 100%)", borderBottom: "3px solid #c8a84b", padding: "24px 32px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-          <img src="data:image/jpeg;base64,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WnHPlx6LT9HBh0xdUO/O5N+5deNjI2BkbGsaOgaMAL+oujHDHHxF5JPAiIrJEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERB//Z" alt="Secretaría Control Ecológico" style={{ width: 70, height: 70, borderRadius: "50%", flexShrink: 0, objectFit: "cover" }} />
-          <div>
-            
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: "bold", color: "#ffffff", letterSpacing: 1 }}>SECRETARÍA CONTROL ECOLÓGICO</h1>
-          </div>
-        </div>
-        <div style={{ marginTop: 16, borderTop: "1px solid #2e4a6a", paddingTop: 12 }}>
-          <h2 style={{ margin: 0, fontSize: 15, color: "#a8d4a8", fontWeight: "normal", letterSpacing: 1 }}>
-            INFORME DE AUDITORÍA PRESUPUESTARIA — EJERCICIO 2012
-          </h2>
-          <div style={{ display: "flex", gap: 24, marginTop: 8, fontSize: 11, color: "#7aab7a" }}>
-            <span>Actuación N° 2012/0187</span>
-            <span>Entidad: Organismo Descentralizado — Control Ecológico</span>
-            <span>Aprobado: Resolución SCE 42/2013</span>
-          </div>
-        </div>
-      </div>
-
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: "#0d2110", borderBottom: "2px solid #1a3a1a" }}>
-        {[
-          { label: "Crédito Vigente Total", value: formatM(totalCredito * 1e6), icon: "📋" },
-          { label: "Total Devengado", value: formatM(totalPagado * 1e6), icon: "💳" },
-          { label: "Ejecución Presupuestaria", value: formatPct(ejecPromedio), icon: "📊" },
-          { label: "Fuentes Financiamiento", value: "4", icon: "🏛" },
-        ].map((k, i) => (
-          <div key={i} style={{ background: "#0d2110", padding: "20px 24px", borderRight: "1px solid #1a3a1a" }}>
-            <div style={{ fontSize: 18, marginBottom: 4 }}>{k.icon}</div>
-            <div style={{ fontSize: 22, fontWeight: "bold", color: i === 2 ? (ejecPromedio >= 0.75 ? "#5bc85b" : "#e74c3c") : "#c8a84b" }}>{k.value}</div>
-            <div style={{ fontSize: 11, color: "#7aab7a", marginTop: 4, letterSpacing: 0.5 }}>{k.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", background: "#0d2110", borderBottom: "2px solid #1a3a1a", padding: "0 16px" }}>
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "12px 18px", border: "none", background: "none", cursor: "pointer",
-              fontSize: 12, letterSpacing: 0.5, fontFamily: "Georgia, serif",
-              color: tab === t.id ? "#c8a84b" : "#7aab7a",
-              borderBottom: tab === t.id ? "2px solid #c8a84b" : "2px solid transparent",
-              marginBottom: -2, transition: "color 0.2s",
-            }}
-          >
-            {t.label.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
-
-        {/* RESUMEN EJECUTIVO */}
-        {tab === "resumen" && (
-          <div>
-            <SectionTitle>I. OBJETO DE LA AUDITORÍA</SectionTitle>
-            <p style={{ fontSize: 13, lineHeight: 1.8, color: "#b0d4b0", marginBottom: 24 }}>
-              La presente actuación tuvo por objeto verificar la legalidad, regularidad y eficiencia en la ejecución presupuestaria del Organismo durante el ejercicio fiscal 2012, con especial énfasis en la utilización de los créditos asignados por fuente de financiamiento y objeto del gasto, conforme lo establecido en la Ley N° 25.675 General del Ambiente y los Sistemas de Control del Sector Público Nacional.
-            </p>
-
-            <SectionTitle>II. ALCANCE</SectionTitle>
-            <p style={{ fontSize: 13, lineHeight: 1.8, color: "#b0d4b0", marginBottom: 24 }}>
-              Se auditaron el 100% de las fuentes de financiamiento y conceptos de gasto, abarcando un crédito vigente total de <b style={{ color: "#c8a84b" }}>${totalCredito.toFixed(1)} millones</b> y devengado consumido de <b style={{ color: "#c8a84b" }}>${totalPagado.toFixed(1)} millones</b>, lo que representa una ejecución presupuestaria global del <b style={{ color: ejecPromedio >= 0.75 ? "#5bc85b" : "#e74c3c" }}>{formatPct(ejecPromedio)}</b>.
-            </p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
-              <div style={{ background: "#0d2110", border: "1px solid #1e3d5a", borderRadius: 6, padding: 20 }}>
-                <h4 style={{ color: "#c8a84b", fontSize: 12, letterSpacing: 1, margin: "0 0 16px 0", textTransform: "uppercase" }}>Distribución del Gasto Pagado</h4>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={75} dataKey="value" label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
-                      {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip formatter={(v) => formatM(v * 1e6)} contentStyle={{ background: "#0d2110", border: "1px solid #2e6d3a", fontSize: 11 }} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: 10, color: "#a8d4a8" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div style={{ background: "#0d2110", border: "1px solid #1e3d5a", borderRadius: 6, padding: 20 }}>
-                <h4 style={{ color: "#c8a84b", fontSize: 12, letterSpacing: 1, margin: "0 0 16px 0", textTransform: "uppercase" }}>Ejecución por Fuente (%)</h4>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={fuentes} layout="vertical" margin={{ left: 20 }}>
-                    <XAxis type="number" domain={[0, 1]} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#7aab7a", fontSize: 10 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: "#a8d4a8", fontSize: 10 }} width={110} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="ejecucion" name="Ejecución" radius={[0, 3, 3, 0]}>
-                      {fuentes.map((f, i) => <Cell key={i} fill={f.ejecucion >= 0.75 ? "#2e6d3a" : "#c0392b"} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <SectionTitle>III. CONCLUSIONES GENERALES</SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {[
-                { icon: "✅", txt: "La ejecución global del 86,3% se encuentra dentro de parámetros aceptables para organismos del sector salud.", ok: true },
-                { icon: "⚠️", txt: "Se detectaron 2 observaciones formales que requieren atención por parte de las autoridades del Organismo.", ok: false },
-                { icon: "✅", txt: "Los Gastos en Personal representan el 61,7% del presupuesto devengado, coherente con la naturaleza del Organismo de control ambiental.", ok: true },
-                { icon: "⚠️", txt: "La subejecución en Bienes de Uso (36,7%) podría comprometer la capacidad operativa del Organismo en el mediano plazo.", ok: false },
-              ].map((c, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, padding: "12px 16px", background: "#0d2110", border: `1px solid ${c.ok ? "#1a4a1a" : "#4a1a1a"}`, borderRadius: 4, fontSize: 12, color: "#b0d4b0", lineHeight: 1.6 }}>
-                  <span style={{ fontSize: 16 }}>{c.icon}</span>
-                  <span>{c.txt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* FUENTES */}
-        {tab === "fuentes" && (
-          <div>
-            <SectionTitle>ANÁLISIS POR FUENTE DE FINANCIAMIENTO</SectionTitle>
-            <div style={{ overflowX: "auto", marginBottom: 32 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead>
-                  <tr style={{ background: "#1a3a1a", color: "#c8a84b", textTransform: "uppercase", letterSpacing: 1 }}>
-                    {["Fuente", "Crédito Vigente", "Compromiso", "Devengado", "Devengado", "Ejec. %", "Estado"].map((h) => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "right", fontWeight: "normal", fontSize: 10, borderBottom: "2px solid #c8a84b" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {fuentes.map((f, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid #1a3a1a", transition: "background 0.2s" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#0f2a0f"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      <td style={{ padding: "11px 14px", color: "#d4ead4", fontWeight: "bold" }}>{f.name}</td>
-                      <td style={{ padding: "11px 14px", textAlign: "right", color: "#a8d4a8" }}>{formatM(f.credito * 1e6)}</td>
-                      <td style={{ padding: "11px 14px", textAlign: "right", color: "#a8d4a8" }}>{formatM(f.credito * f.ejecucion * 1.02 * 1e6)}</td>
-                      <td style={{ padding: "11px 14px", textAlign: "right", color: "#a8d4a8" }}>{formatM(f.credito * f.ejecucion * 1.005 * 1e6)}</td>
-                      <td style={{ padding: "11px 14px", textAlign: "right", color: "#c8a84b", fontWeight: "bold" }}>{formatM(f.devengado * 1e6)}</td>
-                      <td style={{ padding: "11px 14px", textAlign: "right" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                          <div style={{ width: 60, height: 6, background: "#1a3a1a", borderRadius: 3, overflow: "hidden" }}>
-                            <div style={{ width: `${f.ejecucion * 100}%`, height: "100%", background: f.ejecucion >= 0.75 ? "#2e6d3a" : "#c0392b", borderRadius: 3 }} />
-                          </div>
-                          <span style={{ color: f.ejecucion >= 0.75 ? "#5bc85b" : "#e74c3c" }}>{formatPct(f.ejecucion)}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "11px 14px", textAlign: "right" }}>
-                        <span style={{ padding: "3px 8px", borderRadius: 3, fontSize: 10, background: f.ejecucion >= 0.75 ? "#1a3a1a" : "#3a1a1a", color: f.ejecucion >= 0.75 ? "#5bc85b" : "#e74c3c", border: `1px solid ${f.ejecucion >= 0.75 ? "#2a6a2a" : "#6a2a2a"}` }}>
-                          {f.ejecucion >= 0.75 ? "REGULAR" : "OBSERVADO"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr style={{ background: "#1a3a1a", fontWeight: "bold" }}>
-                    <td style={{ padding: "11px 14px", color: "#ffffff" }}>TOTAL</td>
-                    <td style={{ padding: "11px 14px", textAlign: "right", color: "#c8a84b" }}>{formatM(totalCredito * 1e6)}</td>
-                    <td colSpan={2} style={{ padding: "11px 14px", textAlign: "right", color: "#a8d4a8" }}>—</td>
-                    <td style={{ padding: "11px 14px", textAlign: "right", color: "#c8a84b" }}>{formatM(totalPagado * 1e6)}</td>
-                    <td style={{ padding: "11px 14px", textAlign: "right", color: "#5bc85b" }}>{formatPct(ejecPromedio)}</td>
-                    <td />
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={fuentes} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a3a1a" />
-                <XAxis dataKey="name" tick={{ fill: "#a8d4a8", fontSize: 11 }} />
-                <YAxis tickFormatter={(v) => `$${v}M`} tick={{ fill: "#7aab7a", fontSize: 10 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11, color: "#a8d4a8" }} />
-                <Bar dataKey="credito" name="Crédito Vigente" fill="#1a3a1a" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="devengado" name="Devengado" fill="#2e6d3a" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* CONCEPTOS */}
-        {tab === "conceptos" && (
-          <div>
-            <SectionTitle>ESTRUCTURA DEL GASTO POR CONCEPTO</SectionTitle>
-            <div style={{ overflowX: "auto", marginBottom: 32 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead>
-                  <tr style={{ background: "#1a3a1a", color: "#c8a84b" }}>
-                    {["Concepto", "Crédito Vigente", "Devengado", "Diferencia", "Ejecución", "% del Total Pag."].map((h) => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "right", fontWeight: "normal", fontSize: 10, letterSpacing: 0.5, borderBottom: "2px solid #c8a84b" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {conceptos.map((c, i) => {
-                    const ejec = c.credito > 0 ? c.devengado / c.credito : 0;
-                    const pct = totalPagado > 0 ? c.devengado / totalPagado : 0;
-                    return (
-                      <tr key={i} style={{ borderBottom: "1px solid #1a3a1a" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "#0f2a0f"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                        <td style={{ padding: "11px 14px", color: "#d4ead4" }}>{c.name}</td>
-                        <td style={{ padding: "11px 14px", textAlign: "right", color: "#a8d4a8" }}>{formatM(c.credito * 1e6)}</td>
-                        <td style={{ padding: "11px 14px", textAlign: "right", color: "#c8a84b", fontWeight: "bold" }}>{c.devengado > 0 ? formatM(c.devengado * 1e6) : <span style={{ color: "#e74c3c" }}>$0</span>}</td>
-                        <td style={{ padding: "11px 14px", textAlign: "right", color: "#e74c3c" }}>{formatM((c.credito - c.devengado) * 1e6)}</td>
-                        <td style={{ padding: "11px 14px", textAlign: "right" }}>
-                          <span style={{ color: ejec >= 0.75 ? "#5bc85b" : ejec === 0 ? "#e74c3c" : "#f39c12" }}>{formatPct(ejec)}</span>
-                        </td>
-                        <td style={{ padding: "11px 14px", textAlign: "right" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                            <div style={{ width: 80, height: 5, background: "#1a3a1a", borderRadius: 3, overflow: "hidden" }}>
-                              <div style={{ width: `${pct * 100}%`, height: "100%", background: COLORS[i % COLORS.length], borderRadius: 3 }} />
-                            </div>
-                            <span style={{ color: "#a8d4a8", minWidth: 36 }}>{formatPct(pct)}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={conceptos} margin={{ top: 10, right: 20, bottom: 50, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a3a1a" />
-                <XAxis dataKey="name" tick={{ fill: "#a8d4a8", fontSize: 9 }} angle={-25} textAnchor="end" />
-                <YAxis tickFormatter={(v) => `$${v}M`} tick={{ fill: "#7aab7a", fontSize: 10 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11, color: "#a8d4a8" }} />
-                <Bar dataKey="credito" name="Crédito Vigente" fill="#1a3a1a" />
-                <Bar dataKey="devengado" name="Devengado" fill="#c8a84b" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* EVOLUCIÓN */}
-        {tab === "evolucion" && (
-          <div>
-            <SectionTitle>EVOLUCIÓN MENSUAL DEL GASTO (en $M)</SectionTitle>
-            <p style={{ fontSize: 12, color: "#7aab7a", marginBottom: 24, fontStyle: "italic" }}>
-              * Datos proyectados sobre base de la ejecución anual — Ejercicio 2012. Cifras en millones de pesos ($M).
-            </p>
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={evolucionMensual} margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a3a1a" />
-                <XAxis dataKey="mes" tick={{ fill: "#a8d4a8", fontSize: 11 }} />
-                <YAxis tickFormatter={(v) => `$${v}M`} tick={{ fill: "#7aab7a", fontSize: 10 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11, color: "#a8d4a8" }} />
-                <Line type="monotone" dataKey="comprometido" name="Comprometido" stroke="#4a9b5b" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="devengado" name="Devengado" stroke="#c8a84b" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="devengado" name="Devengado" stroke="#5bc85b" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-
-            <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-              {[
-                { label: "Devengado Acumulado", value: "$2.222,8M", delta: "+4,2% vs ejercicio 2011" },
-                { label: "Brecha Comprometido/Pagado", value: "$44M", delta: "Dentro de parámetros normales" },
-                { label: "Ritmo de Ejecución", value: "7,2%/mes", delta: "Promedio mensual" },
-              ].map((s, i) => (
-                <div key={i} style={{ background: "#0d2110", border: "1px solid #1e3d5a", borderRadius: 6, padding: 16 }}>
-                  <div style={{ fontSize: 20, fontWeight: "bold", color: "#c8a84b" }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: "#d4ead4", margin: "6px 0 4px" }}>{s.label}</div>
-                  <div style={{ fontSize: 10, color: "#7aab7a" }}>{s.delta}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* HALLAZGOS */}
-        {tab === "hallazgos" && (
-          <div>
-            <SectionTitle>OBSERVACIONES Y RECOMENDACIONES</SectionTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 32 }}>
-              {hallazgos.map((h, i) => (
-                <div key={i} style={{ background: "#0d2110", border: `1px solid ${h.color}44`, borderLeft: `4px solid ${h.color}`, borderRadius: 4, padding: "16px 20px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                    <span style={{ padding: "2px 8px", fontSize: 10, borderRadius: 2, background: h.color, color: "#fff", letterSpacing: 1, fontFamily: "monospace" }}>{h.tipo}</span>
-                    <span style={{ fontSize: 11, color: "#7aab7a", fontFamily: "monospace" }}>{h.id}</span>
-                  </div>
-                  <h4 style={{ margin: "0 0 8px 0", fontSize: 13, color: "#d4ead4" }}>{h.titulo}</h4>
-                  <p style={{ margin: 0, fontSize: 12, color: "#a0c4a0", lineHeight: 1.7 }}>{h.detalle}</p>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ background: "#0d2110", border: "1px solid #1e3d5a", borderRadius: 6, padding: 20 }}>
-              <h4 style={{ color: "#c8a84b", fontSize: 12, letterSpacing: 1, margin: "0 0 16px 0", textTransform: "uppercase" }}>RESPUESTA DEL ORGANISMO AUDITADO</h4>
-              <p style={{ fontSize: 12, color: "#b0d4b0", lineHeight: 1.8, margin: 0 }}>
-                La autoridad auditada tomó conocimiento de las observaciones formuladas mediante Nota DGPLA N° 2013/0054 de fecha 15/03/2013. Comprometió la implementación de las recomendaciones en un plazo de 90 días corridos, con presentación de un plan de acción detallado ante esta Auditoría General.
-              </p>
-              <div style={{ marginTop: 12, display: "flex", gap: 12 }}>
-                <span style={{ fontSize: 11, color: "#7aab7a" }}>Estado de respuesta:</span>
-                <span style={{ fontSize: 11, color: "#5bc85b", background: "#1a3a1a", padding: "2px 10px", borderRadius: 3, border: "1px solid #2a6a2a" }}>RECIBIDA Y EN SEGUIMIENTO</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div style={{ marginTop: 40, paddingTop: 16, borderTop: "1px solid #1a3a1a", display: "flex", justifyContent: "space-between", fontSize: 10, color: "#3a5a3a" }}>
-          <span>SECRETARÍA CONTROL ECOLÓGICO — Uso Interno</span>
-          <span>Actuación N° 2012/0187 · Página 1 de 1</span>
-          <span>Generado: Abril 2013</span>
-        </div>
+      <div class="chart-box">
+        <div class="chart-title">Ejecución por Fuente (%)</div>
+        <div class="chart-container"><canvas id="ejecChart" height="200"></canvas></div>
       </div>
     </div>
-  );
-}
-
-function SectionTitle({ children }) {
-  return (
-    <h3 style={{ fontSize: 11, letterSpacing: 2, color: "#c8a84b", textTransform: "uppercase", borderBottom: "1px solid #1a3a1a", paddingBottom: 8, marginBottom: 16, marginTop: 0 }}>
-      {children}
-    </h3>
-  );
-}
+    <h3 class="section-title">III. CONCLUSIONES GENERALES</h3>
+    <div class="conclusion-grid">
+      <div class="conclusion-item ok"><span class="icon">✅</span><span>La ejecución global del 86,3% se encuentra dentro de parámetros aceptables para organismos del sector ambiental.</span></div>
+      <div class="conclusion-item warn"><span class="icon">⚠️</span><span>Se detectaron 2 observaciones formales que requieren atención por parte de las autoridades del Organismo.</span></div>
+      <div class="conclusion-item ok"><span class="icon">✅</span><span>Los Gastos en Personal representan el 61,7% del presupuesto devengado, coherente con la naturaleza del Organismo de control ambiental.</span></div>
+      <div class="conclusion-item warn"><span class="icon">⚠️</span><span>La subejecución en Bienes de Uso (36,7%) podría comprometer la capacidad operativa del Organismo en el mediano plazo.</span></div>
+    </div>
+  </div>
+ 
+  <!-- FUENTES -->
+  <div id="tab-fuentes" class="tab-panel">
+    <h3 class="section-title">ANÁLISIS POR FUENTE DE FINANCIAMIENTO</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Fuente</th>
+            <th>Crédito Vigente</th>
+            <th>Compromiso</th>
+            <th>Devengado</th>
+            <th>Ejec. %</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="fuentes-tbody"></tbody>
+      </table>
+    </div>
+    <div class="chart-container"><canvas id="fuentesBar" height="120"></canvas></div>
+  </div>
+ 
+  <!-- CONCEPTOS -->
+  <div id="tab-conceptos" class="tab-panel">
+    <h3 class="section-title">ESTRUCTURA DEL GASTO POR CONCEPTO</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Concepto</th>
+            <th>Crédito Vigente</th>
+            <th>Devengado</th>
+            <th>Diferencia</th>
+            <th>Ejecución</th>
+            <th>% del Total</th>
+          </tr>
+        </thead>
+        <tbody id="conceptos-tbody"></tbody>
+      </table>
+    </div>
+    <div class="chart-container"><canvas id="conceptosBar" height="120"></canvas></div>
+  </div>
+ 
+  <!-- EVOLUCION -->
+  <div id="tab-evolucion" class="tab-panel">
+    <h3 class="section-title">EVOLUCIÓN MENSUAL DEL GASTO (en $M)</h3>
+    <p style="font-size:12px;color:#7aab7a;margin-bottom:24px;font-style:italic">* Datos proyectados sobre base de la ejecución anual — Ejercicio 2012. Cifras en millones de pesos ($M).</p>
+    <div class="chart-container"><canvas id="lineChart" height="120"></canvas></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">$2.222,8M</div><div class="stat-label">Devengado Acumulado</div><div class="stat-delta">+4,2% vs ejercicio 2011</div></div>
+      <div class="stat-card"><div class="stat-value">$44M</div><div class="stat-label">Brecha Comprometido/Pagado</div><div class="stat-delta">Dentro de parámetros normales</div></div>
+      <div class="stat-card"><div class="stat-value">7,2%/mes</div><div class="stat-label">Ritmo de Ejecución</div><div class="stat-delta">Promedio mensual</div></div>
+    </div>
+  </div>
+ 
+  <!-- HALLAZGOS -->
+  <div id="tab-hallazgos" class="tab-panel">
+    <h3 class="section-title">OBSERVACIONES Y RECOMENDACIONES</h3>
+    <div class="hallazgos-list">
+      <div class="hallazgo obs">
+        <div class="hallazgo-header"><span class="hallazgo-tipo obs">OBSERVACIÓN</span><span class="hallazgo-id">OBS-001</span></div>
+        <h4>Subejecución en Bienes de Uso</h4>
+        <p>El crédito destinado a Bienes de Uso presenta una ejecución del 36,7%, significativamente por debajo de la media del organismo (86,3%). Se recomienda rever la planificación de adquisiciones.</p>
+      </div>
+      <div class="hallazgo obs">
+        <div class="hallazgo-header"><span class="hallazgo-tipo obs">OBSERVACIÓN</span><span class="hallazgo-id">OBS-002</span></div>
+        <h4>Incremento de Activos Financieros sin ejecución</h4>
+        <p>El crédito de $248,2M asignado a Incremento de Activos Financieros no registra pagos en el período auditado. Se requiere documentación justificatoria.</p>
+      </div>
+      <div class="hallazgo rec">
+        <div class="hallazgo-header"><span class="hallazgo-tipo rec">RECOMENDACIÓN</span><span class="hallazgo-id">REC-001</span></div>
+        <h4>Mejora en planificación presupuestaria</h4>
+        <p>Se sugiere implementar un sistema de seguimiento trimestral del gasto por fuente de financiamiento, con alertas tempranas ante desviaciones superiores al 15% respecto a lo programado.</p>
+      </div>
+      <div class="hallazgo rec">
+        <div class="hallazgo-header"><span class="hallazgo-tipo rec">RECOMENDACIÓN</span><span class="hallazgo-id">REC-002</span></div>
+        <h4>Fortalecimiento del control interno</h4>
+        <p>Reforzar los procedimientos de control previo para Transferencias Externas, cuya ejecución del 61,9% es la más baja entre las fuentes de financiamiento.</p>
+      </div>
+    </div>
+    <div class="respuesta-box">
+      <h4>RESPUESTA DEL ORGANISMO AUDITADO</h4>
+      <p>La autoridad auditada tomó conocimiento de las observaciones formuladas mediante Nota DGPLA N° 2013/0054 de fecha 15/03/2013. Comprometió la implementación de las recomendaciones en un plazo de 90 días corridos, con presentación de un plan de acción detallado ante esta Auditoría General.</p>
+      <div class="respuesta-estado">
+        <span class="respuesta-label">Estado de respuesta:</span>
+        <span class="respuesta-badge">RECIBIDA Y EN SEGUIMIENTO</span>
+      </div>
+    </div>
+  </div>
+ 
+  <div class="footer">
+    <span>SECRETARÍA CONTROL ECOLÓGICO — Uso Interno</span>
+    <span>Actuación N° 2012/0187 · Página 1 de 1</span>
+    <span>Generado: Abril 2013</span>
+  </div>
+</div>
+ 
+<script>
+  // ---- DATA ----
+  const fuentes = [
+    { name: "Tesoro Nacional",    credito: 1685.1, devengado: 1625.8, ejecucion: 0.9648 },
+    { name: "Recursos Propios",   credito: 1254.5, devengado: 920.5,  ejecucion: 0.7337 },
+    { name: "Transf. Externas",   credito: 33.9,   devengado: 21.0,   ejecucion: 0.6190 },
+    { name: "Crédito Interno",    credito: 0.4,    devengado: 0.4,    ejecucion: 0.9998 },
+  ];
+  const conceptos = [
+    { name: "Gastos en Personal",       credito: 1596.7, devengado: 1583.4 },
+    { name: "Servicios No Pers.",       credito: 499.2,  devengado: 404.6  },
+    { name: "Transferencias",           credito: 330.3,  devengado: 318.0  },
+    { name: "Inc. Act. Financieros",    credito: 248.2,  devengado: 0.0    },
+    { name: "Gastos Figurativos",       credito: 216.1,  devengado: 216.1  },
+    { name: "Bienes de Uso",            credito: 45.8,   devengado: 16.8   },
+    { name: "Bienes de Consumo",        credito: 37.8,   devengado: 28.8   },
+  ];
+  const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const comprometido = [142,168,195,221,248,267,289,312,334,358,381,406];
+  const devengadoMes = [138,155,189,208,231,254,272,296,315,339,362,387];
+  const pagadoMes    = [121,143,172,191,215,238,253,274,298,318,341,362];
+ 
+  const totalDevengado = fuentes.reduce((a,b) => a+b.devengado, 0);
+  const fmtM = v => `$${(v).toFixed(1)}M`;
+  const fmtPct = v => `${(v*100).toFixed(1)}%`;
+ 
+  // ---- TABS ----
+  function showTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active');
+    btn.classList.add('active');
+  }
+ 
+  // ---- TABLES ----
+  // Fuentes
+  const ftbody = document.getElementById('fuentes-tbody');
+  fuentes.forEach(f => {
+    const ok = f.ejecucion >= 0.75;
+    const pctW = Math.round(f.ejecucion*100);
+    ftbody.innerHTML += `
+      <tr>
+        <td><b>${f.name}</b></td>
+        <td>${fmtM(f.credito)}</td>
+        <td>${fmtM(f.credito*f.ejecucion*1.02)}</td>
+        <td style="color:#c8a84b;font-weight:bold">${fmtM(f.devengado)}</td>
+        <td>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill ${ok?'green':'red'}" style="width:${pctW}%"></div></div>
+            <span style="color:${ok?'#5bc85b':'#e74c3c'}">${fmtPct(f.ejecucion)}</span>
+          </div>
+        </td>
+        <td><span class="badge ${ok?'ok':'warn'}">${ok?'REGULAR':'OBSERVADO'}</span></td>
+      </tr>`;
+  });
+  const totalCredF = fuentes.reduce((a,b)=>a+b.credito,0);
+  ftbody.innerHTML += `<tr class="total-row"><td>TOTAL</td><td>${fmtM(totalCredF)}</td><td>—</td><td>${fmtM(totalDevengado)}</td><td style="color:#5bc85b">${fmtPct(totalDevengado/totalCredF)}</td><td></td></tr>`;
+ 
+  // Conceptos
+  const ctbody = document.getElementById('conceptos-tbody');
+  conceptos.forEach(c => {
+    const ejec = c.credito > 0 ? c.devengado/c.credito : 0;
+    const pct  = totalDevengado > 0 ? c.devengado/totalDevengado : 0;
+    const eColor = ejec >= 0.75 ? '#5bc85b' : ejec === 0 ? '#e74c3c' : '#f39c12';
+    const devVal = c.devengado > 0 ? `<span style="color:#c8a84b;font-weight:bold">${fmtM(c.devengado)}</span>` : `<span style="color:#e74c3c">$0</span>`;
+    ctbody.innerHTML += `
+      <tr>
+        <td>${c.name}</td>
+        <td>${fmtM(c.credito)}</td>
+        <td>${devVal}</td>
+        <td style="color:#e74c3c">${fmtM(c.credito-c.devengado)}</td>
+        <td style="color:${eColor}">${fmtPct(ejec)}</td>
+        <td>
+          <div class="progress-wrap">
+            <div class="progress-bar" style="width:80px"><div class="progress-fill green" style="width:${Math.round(pct*100)}%"></div></div>
+            <span style="color:#a8d4a8">${fmtPct(pct)}</span>
+          </div>
+        </td>
+      </tr>`;
+  });
+ 
+  // ---- CHARTS ----
+  const GRID = '#1a3a1a';
+  const TEXT = '#a8d4a8';
+  Chart.defaults.color = TEXT;
+ 
+  // Pie
+  new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: conceptos.filter(c=>c.devengado>0).map(c=>c.name),
+      datasets: [{ data: conceptos.filter(c=>c.devengado>0).map(c=>c.devengado),
+        backgroundColor: ['#1a3a1a','#2e6d3a','#4a9b5b','#a8d4a8','#d4ead4'],
+        borderColor: '#071a07', borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { position:'bottom', labels:{ font:{size:10}, boxWidth:10 }}}, responsive:true }
+  });
+ 
+  // Ejecución horizontal bar
+  new Chart(document.getElementById('ejecChart'), {
+    type: 'bar',
+    data: {
+      labels: fuentes.map(f=>f.name),
+      datasets: [{ label:'Ejecución', data: fuentes.map(f=>+(f.ejecucion*100).toFixed(1)),
+        backgroundColor: fuentes.map(f=>f.ejecucion>=0.75?'#2e6d3a':'#c0392b'),
+        borderRadius: 3 }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend:{display:false} },
+      scales: { x:{ max:100, ticks:{callback:v=>v+'%'}, grid:{color:GRID} }, y:{ grid:{color:GRID} } },
+      responsive:true
+    }
+  });
+ 
+  // Fuentes bar
+  new Chart(document.getElementById('fuentesBar'), {
+    type: 'bar',
+    data: {
+      labels: fuentes.map(f=>f.name),
+      datasets: [
+        { label:'Crédito Vigente', data: fuentes.map(f=>f.credito), backgroundColor:'#1a3a1a', borderRadius:3 },
+        { label:'Devengado',       data: fuentes.map(f=>f.devengado), backgroundColor:'#2e6d3a', borderRadius:3 }
+      ]
+    },
+    options: {
+      plugins: { legend:{ labels:{ color:TEXT } } },
+      scales: { x:{ grid:{color:GRID} }, y:{ ticks:{callback:v=>'$'+v+'M'}, grid:{color:GRID} } },
+      responsive:true
+    }
+  });
+ 
+  // Conceptos bar
+  new Chart(document.getElementById('conceptosBar'), {
+    type: 'bar',
+    data: {
+      labels: conceptos.map(c=>c.name),
+      datasets: [
+        { label:'Crédito Vigente', data: conceptos.map(c=>c.credito), backgroundColor:'#1a3a1a', borderRadius:3 },
+        { label:'Devengado',       data: conceptos.map(c=>c.devengado), backgroundColor:'#c8a84b', borderRadius:3 }
+      ]
+    },
+    options: {
+      plugins: { legend:{ labels:{ color:TEXT } } },
+      scales: { x:{ ticks:{ maxRotation:25, font:{size:9} }, grid:{color:GRID} }, y:{ ticks:{callback:v=>'$'+v+'M'}, grid:{color:GRID} } },
+      responsive:true
+    }
+  });
+ 
+  // Line chart
+  new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: meses,
+      datasets: [
+        { label:'Comprometido', data: comprometido, borderColor:'#4a9b5b', tension:0.3, pointRadius:0, borderWidth:2 },
+        { label:'Devengado',    data: devengadoMes, borderColor:'#c8a84b', tension:0.3, pointRadius:0, borderWidth:2 },
+        { label:'Pagado',       data: pagadoMes,    borderColor:'#5bc85b', tension:0.3, pointRadius:0, borderWidth:2 }
+      ]
+    },
+    options: {
+      plugins: { legend:{ labels:{ color:TEXT } } },
+      scales: { x:{ grid:{color:GRID} }, y:{ ticks:{callback:v=>'$'+v+'M'}, grid:{color:GRID} } },
+      responsive:true
+    }
+  });
+</script>
+</body>
+</html>
