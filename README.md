@@ -122,4 +122,6 @@ Este repositorio funciona como portfolio técnico demostrando:
 
 ---
 
-*Desarrollado por [coderhouse2025-droid](https://github.com/coderhouse2025-droid)*
+## 📄 Licencia
+
+Este proyecto está bajo la [Licencia MIT](LICENSE) — libre para uso como referencia, aprendizaje o desarrollo de proyectos propios.
